@@ -2,12 +2,12 @@ body { margin: 0; overflow: hidden; background: #111; font-family: -apple-system
 #canvas-container { width: 100vw; height: 100vh; touch-action: none; }
 
 /* UI Overlay */
-.ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
+.ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column-reverse; justify-content: flex-start; }
 .pointer-events-auto { pointer-events: auto; }
 
 /* Top Bar */
 .top-bar { padding: 10px; display: flex; gap: 10px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); overflow-x: auto; -webkit-overflow-scrolling: touch; transition: transform 0.25s ease-out; }
-.top-bar.collapsed { transform: translateY(-110%); }
+.top-bar.collapsed { transform: translateY(110%); }
 .btn { background: #333; border: 1px solid #555; color: white; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; white-space: nowrap; min-width: 44px; min-height: 44px; transition: background 0.2s; }
 .btn:active { background: #555; transform: scale(0.98); }
 .btn.active { background: #007bff; border-color: #0056b3; }
@@ -16,15 +16,10 @@ body { margin: 0; overflow: hidden; background: #111; font-family: -apple-system
 
 /* Top bar handle (bar-style, similar to bottom panel handle) */
 .top-bar-handle {
-    position: absolute;
-    top: 4px;
-    left: 50%;
-    transform: translateX(-50%);
     height: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 10;
     cursor: pointer;
 }
 
