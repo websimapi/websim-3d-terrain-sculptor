@@ -155,21 +155,104 @@ function setupExportPNG() {
 
     btn.addEventListener('click', () => {
         try {
-            // Make sure the latest frame is rendered
-            renderer.render(scene, camera);
+            // 1. Calculate Bounds
+            let minCx = Infinity, maxCx = -Infinity;
+            let minCz = Infinity, maxCz = -Infinity;
+            let hasData = false;
 
-            const dataURL = renderer.domElement.toDataURL('image/png');
+            for (const key of STATE.heightData.keys()) {
+                const [cx, cz] = key.split(',').map(Number);
+                if (cx < minCx) minCx = cx;
+                if (cx > maxCx) maxCx = cx;
+                if (cz < minCz) minCz = cz;
+                if (cz > maxCz) maxCz = cz;
+                hasData = true;
+            }
+
+            if (!hasData) {
+                alert("No terrain data to export.");
+                return;
+            }
+
+            // 2. Calculate Height Range for Normalization
+            let minH = Infinity, maxH = -Infinity;
+            for (const heights of STATE.heightData.values()) {
+                for (let i = 0; i < heights.length; i++) {
+                    const h = heights[i];
+                    if (h < minH) minH = h;
+                    if (h > maxH) maxH = h;
+                }
+            }
+            
+            if (maxH - minH < 0.001) maxH = minH + 1;
+
+            // 3. Create Canvas
+            // Chunks of size N share edges. The logical pixel width is N. 
+            // Total width = (numChunks * N) + 1 (for the final edge)
+            const chunkSize = CONFIG.chunkSize;
+            const width = (maxCx - minCx + 1) * chunkSize + 1;
+            const height = (maxCz - minCz + 1) * chunkSize + 1;
+            
+            // Safety check for massive textures
+            if (width > 16384 || height > 16384) {
+                if (!confirm(`Warning: Map size is large (${width}x${height}). Export may fail. Continue?`)) return;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, width, height);
+
+            const imgData = ctx.getImageData(0, 0, width, height);
+            const data = imgData.data;
+            const rowVerts = chunkSize + 1; // 33 for size 32
+
+            // 4. Rasterize Chunks
+            for (const [key, heights] of STATE.heightData) {
+                const [cx, cz] = key.split(',').map(Number);
+                const baseX = (cx - minCx) * chunkSize;
+                const baseY = (cz - minCz) * chunkSize;
+
+                for (let i = 0; i < heights.length; i++) {
+                    // Mapping: row index -> Z (Image Y), col index -> X (Image X)
+                    const row = Math.floor(i / rowVerts);
+                    const col = i % rowVerts;
+                    
+                    const h = heights[i];
+                    const val = Math.floor(((h - minH) / (maxH - minH)) * 255);
+
+                    const x = baseX + col;
+                    const y = baseY + row;
+                    
+                    const idx = (y * width + x) * 4;
+                    
+                    // Only write if within bounds (should always be true)
+                    if (idx < data.length) {
+                        data[idx] = val;     // R
+                        data[idx + 1] = val; // G
+                        data[idx + 2] = val; // B
+                        data[idx + 3] = 255; // A
+                    }
+                }
+            }
+
+            ctx.putImageData(imgData, 0, 0);
+
+            // 5. Download
+            const dataURL = canvas.toDataURL('image/png');
             const link = document.createElement('a');
             link.href = dataURL;
-            link.download = 'terrain.png';
-
-            // For iOS Safari, programmatic click must be in same event loop tick
+            link.download = `terrain_heightmap_${Date.now()}.png`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+
         } catch (e) {
-            console.error('Failed to export PNG:', e);
-            alert('Failed to export PNG. Check logs for details.');
+            console.error('Failed to export heightmap:', e);
+            alert('Failed to export heightmap. Check logs.');
         }
     });
 }
