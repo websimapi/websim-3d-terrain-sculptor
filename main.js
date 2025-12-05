@@ -51,6 +51,15 @@ async function init() {
         controls.maxPolarAngle = Math.PI / 2 - 0.1;
         controls.minDistance = 5;
         controls.maxDistance = 150;
+        
+        // Mobile Interactions
+        controls.enableZoom = true;
+        controls.enablePan = true;
+        controls.screenSpacePanning = false; // Pan on XZ plane
+        controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
+        
+        // Start in Sculpt mode (Rotation disabled for 1-finger)
+        controls.enableRotate = false; 
 
         // Tools
         raycaster = new THREE.Raycaster();
@@ -62,7 +71,7 @@ async function init() {
 
         // Start
         await loadAssets();
-        initUI(scene, camera);
+        initUI(scene, camera, controls);
         setupExportPNG();
 
         // Initial Grid

@@ -60,7 +60,7 @@ body { margin: 0; overflow: hidden; background: #111; font-family: -apple-system
 .half-width { flex: 1; min-width: 0; }
 .control-label { display: block; margin-bottom: 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #aaa; }
 
-.tool-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-bottom: 6px; }
+.tool-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-bottom: 6px; }
 .texture-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-bottom: 6px; }
 
 .tool-btn { width: 100%; aspect-ratio: 0.85; max-height: 48px; border-radius: 6px; border: 1px solid #555; background: #444; color: white; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 8px; }
