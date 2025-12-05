@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Terrain Sculptor</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #111; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: white; }
+        #canvas-container { width: 100vw; height: 100vh; touch-action: none; }
+
+        /* UI Overlay */
+        .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
+        .pointer-events-auto { pointer-events: auto; }
+
+        /* Top Bar */
+        .top-bar { padding: 10px; display: flex; gap: 10px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .btn { background: #333; border: 1px solid #555; color: white; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; white-space: nowrap; min-width: 44px; min-height: 44px; transition: background 0.2s; }
+        .btn:active { background: #555; transform: scale(0.98); }
+        .btn.active { background: #007bff; border-color: #0056b3; }
+
+        /* Bottom Controls */
+        .bottom-panel { background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); padding: 15px; border-top-left-radius: 20px; border-top-right-radius: 20px; transition: transform 0.3s; max-height: 50vh; overflow-y: auto; }
+
+        .control-group { margin-bottom: 15px; }
+        .control-label { display: block; margin-bottom: 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #aaa; }
+
+        .tool-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
+        .texture-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
+
+        .texture-btn { width: 100%; aspect-ratio: 1; border-radius: 8px; border: 2px solid #555; background-size: cover; cursor: pointer; }
+        .texture-btn.active { border-color: #007bff; box-shadow: 0 0 8px #007bff; }
+
+        input[type=range] { width: 100%; height: 30px; margin: 0; }
+
+        /* Loading & Notifications */
+        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); padding: 20px; border-radius: 12px; font-weight: bold; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 1000; }
+        .spinner { width: 30px; height: 30px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .hidden { display: none !important; }
+
+        @media (min-width: 768px) {
+            .bottom-panel { width: 350px; position: absolute; bottom: 20px; right: 20px; border-radius: 20px; max-height: 80vh; }
+        }
+    </style>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://esm.sh/three@0.160.0",
+            "three/addons/": "https://esm.sh/three@0.160.0/examples/jsm/",
+            "simplex-noise": "https://esm.sh/simplex-noise@4.0.1"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div id="loading">
+        <div class="spinner"></div>
+        <span>Initializing Terrain Engine...</span>
+    </div>
+
+    <div class="ui-layer">
+        <div class="top-bar pointer-events-auto">
+            <button class="btn" id="btn-undo"> Undo</button>
+            <button class="btn" id="btn-redo"> Redo</button>
+            <button class="btn" id="btn-generate">Generate</button>
+            <button class="btn" id="btn-clear">Clear</button>
+            <button class="btn" id="btn-save">Save JSON</button>
+            <button class="btn" id="btn-load" onclick="document.getElementById('file-input').click()">Load</button>
+            <button class="btn" id="btn-export-img">Export PNG</button>
+            <input type="file" id="file-input" accept=".json" style="display: none;">
+        </div>
+
+        <div class="bottom-panel pointer-events-auto">
+            <div class="control-group">
+                <span class="control-label">Tools</span>
+            </div>
+        </div>
+    </div>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
