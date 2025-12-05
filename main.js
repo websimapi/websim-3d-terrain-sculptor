@@ -63,7 +63,8 @@ async function init() {
         // Start
         await loadAssets();
         initUI(scene, camera);
-        
+        setupExportPNG();
+
         // Initial Grid
         updateChunks(scene, camera);
 
@@ -146,6 +147,31 @@ function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function setupExportPNG() {
+    const btn = document.getElementById('btn-export-img');
+    if (!btn) return;
+
+    btn.addEventListener('click', () => {
+        try {
+            // Make sure the latest frame is rendered
+            renderer.render(scene, camera);
+
+            const dataURL = renderer.domElement.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = dataURL;
+            link.download = 'terrain.png';
+
+            // For iOS Safari, programmatic click must be in same event loop tick
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (e) {
+            console.error('Failed to export PNG:', e);
+            alert('Failed to export PNG. Check logs for details.');
+        }
+    });
 }
 
 function animate() {
