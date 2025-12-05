@@ -1,7 +1,7 @@
 export const CONFIG = {
     chunkSize: 32, // Vertices per side
     chunkRes: 1,   // Distance between vertices
-    renderDistance: 2, // Chunks radius
+    renderDistance: 3, // Chunks radius
     fogColor: 0x88ccff,
 };
 
