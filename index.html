@@ -4,51 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>3D Terrain Sculptor</title>
-    <style>
-        body { margin: 0; overflow: hidden; background: #111; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: white; }
-        #canvas-container { width: 100vw; height: 100vh; touch-action: none; }
-
-        /* UI Overlay */
-        .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
-        .pointer-events-auto { pointer-events: auto; }
-
-        /* Top Bar */
-        .top-bar { padding: 10px; display: flex; gap: 10px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        .btn { background: #333; border: 1px solid #555; color: white; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; white-space: nowrap; min-width: 44px; min-height: 44px; transition: background 0.2s; }
-        .btn:active { background: #555; transform: scale(0.98); }
-        .btn.active { background: #007bff; border-color: #0056b3; }
-        
-        #btn-bug { background: #dc3545; border-color: #bd2130; }
-
-        /* Bottom Controls */
-        .bottom-panel { background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); padding: 15px; border-top-left-radius: 20px; border-top-right-radius: 20px; transition: transform 0.3s; max-height: 50vh; overflow-y: auto; }
-
-        .control-group { margin-bottom: 15px; }
-        .control-label { display: block; margin-bottom: 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #aaa; }
-
-        .tool-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
-        .texture-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
-
-        .tool-btn { width: 100%; aspect-ratio: 1; border-radius: 8px; border: 1px solid #555; background: #444; color: white; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; }
-        .tool-btn i { font-size: 20px; margin-bottom: 4px; font-style: normal; }
-        .tool-btn.active { background: #007bff; border-color: #0056b3; }
-
-        .texture-btn { width: 100%; aspect-ratio: 1; border-radius: 8px; border: 2px solid #555; background-size: cover; cursor: pointer; }
-        .texture-btn.active { border-color: #007bff; box-shadow: 0 0 8px #007bff; }
-
-        input[type=range] { width: 100%; height: 30px; margin: 0; }
-
-        /* Loading & Notifications */
-        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); padding: 20px; border-radius: 12px; font-weight: bold; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 1000; }
-        .spinner { width: 30px; height: 30px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        .hidden { display: none !important; }
-
-        @media (min-width: 768px) {
-            .bottom-panel { width: 350px; position: absolute; bottom: 20px; right: 20px; border-radius: 20px; max-height: 80vh; }
-        }
-    </style>
+    <link rel="stylesheet" href="./style.css">
     <script type="importmap">
     {
         "imports": {
