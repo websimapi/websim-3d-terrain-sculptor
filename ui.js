@@ -94,11 +94,11 @@ export function initUI(scene, camera) { // Needs scene/camera for regenerate
     }
 
     // Top bar hide/show toggle using handle bar
-    const topBar = document.querySelector('.top-bar');
+    const topPanel = document.getElementById('top-panel');
     const topHandle = document.getElementById('top-bar-handle');
-    if (topBar && topHandle) {
+    if (topPanel && topHandle) {
         topHandle.addEventListener('click', () => {
-            topBar.classList.toggle('collapsed');
+            topPanel.classList.toggle('collapsed');
         });
     }
 }

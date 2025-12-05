@@ -24,20 +24,21 @@
     </div>
 
     <div class="ui-layer">
-        <div class="top-bar pointer-events-auto">
-            <button class="btn" id="btn-undo"> Undo</button>
-            <button class="btn" id="btn-redo"> Redo</button>
-            <button class="btn" id="btn-generate">Gen</button>
-            <button class="btn" id="btn-clear">Clear</button>
-            <button class="btn" id="btn-save">Save</button>
-            <button class="btn" id="btn-load" onclick="document.getElementById('file-input').click()">Load</button>
-            <button class="btn" id="btn-export-img">Export PNG</button>
-            <button class="btn" id="btn-bug" title="Copy Debug Logs">🐛</button>
-            <input type="file" id="file-input" accept=".json" style="display: none;">
-        </div>
-        <!-- Top bar toggle handle (bar style, similar to bottom panel) -->
-        <div class="top-bar-handle pointer-events-auto" id="top-bar-handle">
-            <div class="handle-bar"></div>
+        <div class="top-panel-wrapper pointer-events-auto" id="top-panel">
+            <div class="top-bar">
+                <button class="btn" id="btn-undo"> Undo</button>
+                <button class="btn" id="btn-redo"> Redo</button>
+                <button class="btn" id="btn-generate">Gen</button>
+                <button class="btn" id="btn-clear">Clear</button>
+                <button class="btn" id="btn-save">Save</button>
+                <button class="btn" id="btn-load" onclick="document.getElementById('file-input').click()">Load</button>
+                <button class="btn" id="btn-export-img">Export PNG</button>
+                <button class="btn" id="btn-bug" title="Copy Debug Logs">🐛</button>
+                <input type="file" id="file-input" accept=".json" style="display: none;">
+            </div>
+            <div class="top-bar-handle" id="top-bar-handle">
+                <div class="handle-bar"></div>
+            </div>
         </div>
 
         <div class="bottom-panel pointer-events-auto" id="bottom-panel">
