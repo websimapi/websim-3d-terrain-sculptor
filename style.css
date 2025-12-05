@@ -14,22 +14,17 @@ body { margin: 0; overflow: hidden; background: #111; font-family: -apple-system
 
 #btn-bug { background: #dc3545; border-color: #bd2130; }
 
-/* Top bar toggle button */
-.top-bar-toggle {
+/* Top bar handle (bar-style, similar to bottom panel handle) */
+.top-bar-handle {
     position: absolute;
     top: 4px;
-    right: 8px;
-    z-index: 10;
-    background: rgba(0,0,0,0.7);
-    border: 1px solid #555;
-    color: #fff;
-    border-radius: 999px;
-    width: 30px;
+    left: 50%;
+    transform: translateX(-50%);
     height: 30px;
-    font-size: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 10;
     cursor: pointer;
 }
 
