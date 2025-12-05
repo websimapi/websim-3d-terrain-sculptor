@@ -1,5 +1,6 @@
 import { STATE } from './config.js';
 import { textureManifest, updateTerrainMaterial, regenerateAllChunks } from './terrain.js';
+import { saveProject, loadProject } from './io.js';
 
 export function initUI(scene, camera) { // Needs scene/camera for regenerate
     // Populate texture palette
@@ -48,7 +49,18 @@ export function initUI(scene, camera) { // Needs scene/camera for regenerate
          regenerateAllChunks(scene, camera);
     };
 
-    // Save/Load could be implemented here or extended later
+    // Save/Load
+    document.getElementById('btn-save').onclick = () => {
+        saveProject();
+    };
+
+    const fileInput = document.getElementById('file-input');
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            loadProject(e.target.files[0], scene, camera);
+        }
+        e.target.value = ''; // Reset input
+    });
 
     // Panel Toggle Logic
     const panel = document.getElementById('bottom-panel');

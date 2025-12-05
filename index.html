@@ -10,7 +10,8 @@
         "imports": {
             "three": "https://esm.sh/three@0.160.0",
             "three/addons/": "https://esm.sh/three@0.160.0/examples/jsm/",
-            "simplex-noise": "https://esm.sh/simplex-noise@4.0.1"
+            "simplex-noise": "https://esm.sh/simplex-noise@4.0.1",
+            "jszip": "https://esm.sh/jszip@3.10.1"
         }
     }
     </script>
@@ -34,7 +35,7 @@
                 <button class="btn" id="btn-load" onclick="document.getElementById('file-input').click()">Load</button>
                 <button class="btn" id="btn-export-img">Export Map</button>
                 <button class="btn" id="btn-bug" title="Copy Debug Logs">🐛</button>
-                <input type="file" id="file-input" accept=".json" style="display: none;">
+                <input type="file" id="file-input" accept=".zip" style="display: none;">
             </div>
             <div class="top-bar-handle" id="top-bar-handle">
                 <div class="handle-bar"></div>
