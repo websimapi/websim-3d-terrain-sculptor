@@ -49,5 +49,48 @@ export function initUI(scene, camera) { // Needs scene/camera for regenerate
     };
 
     // Save/Load could be implemented here or extended later
+
+    // Panel Toggle Logic
+    const panel = document.getElementById('bottom-panel');
+    const handle = document.getElementById('panel-handle');
+    
+    if (panel && handle) {
+        let ignoreClick = false;
+
+        const togglePanel = () => {
+            panel.classList.toggle('collapsed');
+        };
+        
+        handle.addEventListener('click', () => {
+            if (!ignoreClick) togglePanel();
+        });
+        
+        // Mobile swipe gesture support
+        let startY = 0;
+        
+        handle.addEventListener('touchstart', (e) => {
+            startY = e.touches[0].clientY;
+            ignoreClick = false;
+        }, { passive: true });
+        
+        handle.addEventListener('touchend', (e) => {
+            const endY = e.changedTouches[0].clientY;
+            const diff = endY - startY;
+            
+            // If dragged vertically significantly
+            if (Math.abs(diff) > 10) {
+                ignoreClick = true; // Prevent click from firing toggle again
+                
+                if (diff > 30 && !panel.classList.contains('collapsed')) {
+                    panel.classList.add('collapsed');
+                } else if (diff < -30 && panel.classList.contains('collapsed')) {
+                    panel.classList.remove('collapsed');
+                }
+                
+                // Reset click lock after a short delay
+                setTimeout(() => ignoreClick = false, 300);
+            }
+        });
+    }
 }
 

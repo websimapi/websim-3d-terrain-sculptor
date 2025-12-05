@@ -36,7 +36,9 @@
             <input type="file" id="file-input" accept=".json" style="display: none;">
         </div>
 
-        <div class="bottom-panel pointer-events-auto">
+        <div class="bottom-panel pointer-events-auto" id="bottom-panel">
+            <div id="panel-handle" class="panel-handle-area"><div class="handle-bar"></div></div>
+            <div class="panel-content">
             <div class="control-group">
                 <span class="control-label">Tools</span>
                 <div class="tool-grid">
@@ -62,6 +64,7 @@
                 <div class="texture-grid" id="texture-palette">
                     <!-- Populated by JS -->
                 </div>
+            </div>
             </div>
         </div>
     </div>
