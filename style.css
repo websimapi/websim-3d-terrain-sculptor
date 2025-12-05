@@ -6,12 +6,32 @@ body { margin: 0; overflow: hidden; background: #111; font-family: -apple-system
 .pointer-events-auto { pointer-events: auto; }
 
 /* Top Bar */
-.top-bar { padding: 10px; display: flex; gap: 10px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.top-bar { padding: 10px; display: flex; gap: 10px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); overflow-x: auto; -webkit-overflow-scrolling: touch; transition: transform 0.25s ease-out; }
+.top-bar.collapsed { transform: translateY(-110%); }
 .btn { background: #333; border: 1px solid #555; color: white; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; white-space: nowrap; min-width: 44px; min-height: 44px; transition: background 0.2s; }
 .btn:active { background: #555; transform: scale(0.98); }
 .btn.active { background: #007bff; border-color: #0056b3; }
 
 #btn-bug { background: #dc3545; border-color: #bd2130; }
+
+/* Top bar toggle button */
+.top-bar-toggle {
+    position: absolute;
+    top: 4px;
+    right: 8px;
+    z-index: 10;
+    background: rgba(0,0,0,0.7);
+    border: 1px solid #555;
+    color: #fff;
+    border-radius: 999px;
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
 
 /* Bottom Controls */
 .bottom-panel { background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); padding: 0; border-top-left-radius: 20px; border-top-right-radius: 20px; transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1); max-height: 50vh; display: flex; flex-direction: column; }

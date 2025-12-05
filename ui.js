@@ -92,5 +92,22 @@ export function initUI(scene, camera) { // Needs scene/camera for regenerate
             }
         });
     }
+
+    // Top bar hide/show toggle
+    const topBar = document.querySelector('.top-bar');
+    const topToggle = document.getElementById('top-bar-toggle');
+    if (topBar && topToggle) {
+        const updateToggleIcon = () => {
+            const collapsed = topBar.classList.contains('collapsed');
+            topToggle.textContent = collapsed ? '▽' : '△';
+        };
+
+        topToggle.addEventListener('click', () => {
+            topBar.classList.toggle('collapsed');
+            updateToggleIcon();
+        });
+
+        updateToggleIcon();
+    }
 }
 
