@@ -17,6 +17,8 @@
         .btn { background: #333; border: 1px solid #555; color: white; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; white-space: nowrap; min-width: 44px; min-height: 44px; transition: background 0.2s; }
         .btn:active { background: #555; transform: scale(0.98); }
         .btn.active { background: #007bff; border-color: #0056b3; }
+        
+        #btn-bug { background: #dc3545; border-color: #bd2130; }
 
         /* Bottom Controls */
         .bottom-panel { background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); padding: 15px; border-top-left-radius: 20px; border-top-right-radius: 20px; transition: transform 0.3s; max-height: 50vh; overflow-y: auto; }
@@ -26,6 +28,10 @@
 
         .tool-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
         .texture-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
+
+        .tool-btn { width: 100%; aspect-ratio: 1; border-radius: 8px; border: 1px solid #555; background: #444; color: white; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; }
+        .tool-btn i { font-size: 20px; margin-bottom: 4px; font-style: normal; }
+        .tool-btn.active { background: #007bff; border-color: #0056b3; }
 
         .texture-btn { width: 100%; aspect-ratio: 1; border-radius: 8px; border: 2px solid #555; background-size: cover; cursor: pointer; }
         .texture-btn.active { border-color: #007bff; box-shadow: 0 0 8px #007bff; }
@@ -70,15 +76,553 @@
             <button class="btn" id="btn-save">Save JSON</button>
             <button class="btn" id="btn-load" onclick="document.getElementById('file-input').click()">Load</button>
             <button class="btn" id="btn-export-img">Export PNG</button>
+            <button class="btn" id="btn-bug" title="Copy Debug Logs">🐛</button>
             <input type="file" id="file-input" accept=".json" style="display: none;">
         </div>
 
         <div class="bottom-panel pointer-events-auto">
             <div class="control-group">
                 <span class="control-label">Tools</span>
+                <div class="tool-grid">
+                    <button class="tool-btn active" data-tool="raise" id="tool-raise"><i>▲</i>Raise</button>
+                    <button class="tool-btn" data-tool="lower" id="tool-lower"><i>▼</i>Lower</button>
+                    <button class="tool-btn" data-tool="flatten" id="tool-flatten"><i>━</i>Flatten</button>
+                    <button class="tool-btn" data-tool="smooth" id="tool-smooth"><i>~</i>Smooth</button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <span class="control-label">Brush Size</span>
+                <input type="range" id="brush-size" min="1" max="20" value="5">
+            </div>
+
+            <div class="control-group">
+                <span class="control-label">Brush Intensity</span>
+                <input type="range" id="brush-intensity" min="1" max="100" value="20">
+            </div>
+
+            <div class="control-group">
+                <span class="control-label">Textures</span>
+                <div class="texture-grid" id="texture-palette">
+                    <!-- Populated by JS -->
+                </div>
             </div>
         </div>
     </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { SimplexNoise } from 'three/addons/math/SimplexNoise.js'; // Note: Example path, might need adjustment based on import map
+
+        // --- 1. Debug Logging System ---
+        const logs = [];
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const originalError = console.error;
+
+        function captureLog(type, args) {
+            try {
+                const msg = args.map(a => {
+                    if (a instanceof Error) return a.stack || a.message;
+                    if (typeof a === 'object') return JSON.stringify(a, null, 2);
+                    return String(a);
+                }).join(' ');
+                const timestamp = new Date().toISOString().split('T')[1].slice(0, -1);
+                logs.push(`[${timestamp}] [${type}] ${msg}`);
+                if (logs.length > 500) logs.shift();
+            } catch (e) {
+                // Fail silently in logger
+            }
+        }
+
+        console.log = (...args) => { captureLog('LOG', args); originalLog.apply(console, args); };
+        console.warn = (...args) => { captureLog('WARN', args); originalWarn.apply(console, args); };
+        console.error = (...args) => { captureLog('ERR', args); originalError.apply(console, args); };
+
+        window.onerror = (msg, url, line, col, error) => {
+            captureLog('UNCAUGHT', [msg, url, line, col, error]);
+            alert('An error occurred. Tap the 🐛 icon to copy logs.');
+            return false;
+        };
+
+        // Bug Report Button
+        document.getElementById('btn-bug').addEventListener('click', async () => {
+            try {
+                const logText = logs.join('\n');
+                await navigator.clipboard.writeText(logText);
+                alert('Debug logs copied to clipboard!');
+            } catch (err) {
+                console.error('Failed to copy logs:', err);
+                alert('Failed to copy logs. Check console.');
+            }
+        });
+
+        // --- 2. Configuration & State ---
+        const CONFIG = {
+            chunkSize: 32, // Vertices per side
+            chunkRes: 1,   // Distance between vertices
+            renderDistance: 2, // Chunks radius
+            fogColor: 0x88ccff,
+        };
+
+        const STATE = {
+            brush: {
+                radius: 5,
+                strength: 0.2,
+                mode: 'raise', // raise, lower, flatten, smooth
+                active: false
+            },
+            currentTexture: 'grass',
+            textures: {},
+            chunks: new Map(), // key: "x,z", value: ChunkMesh
+            heightData: new Map(), // key: "x,z", value: Float32Array
+            seed: Math.random()
+        };
+
+        // --- 3. Asset Loading ---
+        const textureLoader = new THREE.TextureLoader();
+        const textureManifest = [
+            { id: 'grass', path: './asset_grass.png', name: 'Grass' },
+            { id: 'rock', path: './asset_rock.png', name: 'Rock' },
+            { id: 'dirt', path: './asset_dirt.png', name: 'Dirt' },
+            { id: 'snow', path: './asset_snow.png', name: 'Snow' }
+        ];
+
+        async function loadAssets() {
+            console.log("Loading assets...");
+            const promises = textureManifest.map(t => {
+                return new Promise((resolve, reject) => {
+                    textureLoader.load(t.path, (tex) => {
+                        tex.wrapS = THREE.RepeatWrapping;
+                        tex.wrapT = THREE.RepeatWrapping;
+                        tex.repeat.set(4, 4); // Tile it
+                        tex.colorSpace = THREE.SRGBColorSpace;
+                        STATE.textures[t.id] = tex;
+                        resolve();
+                    }, undefined, (err) => {
+                        console.error(`Failed loading ${t.path}`, err);
+                        // Resolve anyway to not block app, just missing tex
+                        resolve();
+                    });
+                });
+            });
+            await Promise.all(promises);
+            console.log("Assets loaded");
+            initUI();
+        }
+
+        function initUI() {
+            // Populate texture palette
+            const palette = document.getElementById('texture-palette');
+            textureManifest.forEach(t => {
+                const div = document.createElement('div');
+                div.className = `texture-btn ${t.id === STATE.currentTexture ? 'active' : ''}`;
+                div.style.backgroundImage = `url(${t.path})`;
+                div.onclick = () => {
+                    document.querySelectorAll('.texture-btn').forEach(b => b.classList.remove('active'));
+                    div.classList.add('active');
+                    STATE.currentTexture = t.id;
+                    updateTerrainMaterial();
+                };
+                palette.appendChild(div);
+            });
+
+            // Tools
+            document.querySelectorAll('.tool-btn').forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    STATE.brush.mode = btn.dataset.tool;
+                };
+            });
+
+            // Sliders
+            document.getElementById('brush-size').addEventListener('input', (e) => {
+                STATE.brush.radius = parseFloat(e.target.value);
+            });
+            document.getElementById('brush-intensity').addEventListener('input', (e) => {
+                STATE.brush.strength = parseFloat(e.target.value) / 100;
+            });
+
+            // Action Buttons
+            document.getElementById('btn-clear').onclick = () => {
+                if(confirm("Clear all terrain edits?")) {
+                    STATE.heightData.clear();
+                    regenerateAllChunks();
+                }
+            };
+            
+            document.getElementById('btn-generate').onclick = () => {
+                 STATE.heightData.clear();
+                 STATE.seed = Math.random();
+                 regenerateAllChunks();
+            };
+        }
+
+        // --- 4. Engine Core ---
+        let scene, camera, renderer, controls, raycaster, pointer;
+        let lightAmbient, lightDir;
+        
+        async function init() {
+            try {
+                console.log("Initializing Engine...");
+                
+                // Scene
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(CONFIG.fogColor);
+                scene.fog = new THREE.Fog(CONFIG.fogColor, 20, 100);
+
+                // Camera
+                camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
+                camera.position.set(0, 30, 40);
+
+                // Renderer
+                const canvas = document.createElement('canvas');
+                document.getElementById('canvas-container').appendChild(canvas);
+                
+                renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                renderer.shadowMap.enabled = true;
+
+                // Lighting
+                lightAmbient = new THREE.AmbientLight(0xffffff, 0.6);
+                scene.add(lightAmbient);
+
+                lightDir = new THREE.DirectionalLight(0xffffff, 1.2);
+                lightDir.position.set(50, 100, 50);
+                lightDir.castShadow = true;
+                lightDir.shadow.mapSize.width = 2048;
+                lightDir.shadow.mapSize.height = 2048;
+                scene.add(lightDir);
+
+                // Controls
+                controls = new OrbitControls(camera, canvas);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+                controls.maxPolarAngle = Math.PI / 2 - 0.1;
+                controls.minDistance = 5;
+                controls.maxDistance = 150;
+
+                // Tools
+                raycaster = new THREE.Raycaster();
+                pointer = new THREE.Vector2();
+
+                // Events
+                window.addEventListener('resize', onWindowResize);
+                setupInteraction();
+
+                // Start
+                await loadAssets();
+                
+                // Initial Grid
+                updateChunks();
+
+                // Hide loader
+                document.getElementById('loading').classList.add('hidden');
+                
+                console.log("Engine Started");
+                animate();
+
+            } catch (err) {
+                console.error("Critical Init Error:", err);
+                alert("Failed to initialize engine. Check logs.");
+            }
+        }
+
+        // --- 5. Terrain System ---
+        // Simple noise function for base terrain
+        import { createNoise2D } from 'https://esm.sh/simplex-noise@4.0.1';
+        const noise2D = createNoise2D();
+
+        function getBaseHeight(x, z) {
+            const scale = 0.03;
+            let y = noise2D(x * scale + STATE.seed * 100, z * scale + STATE.seed * 100) * 8;
+            y += noise2D(x * scale * 4, z * scale * 4) * 2;
+            return y;
+        }
+
+        function getChunkKey(cx, cz) {
+            return `${cx},${cz}`;
+        }
+
+        function getChunk(cx, cz) {
+            const key = getChunkKey(cx, cz);
+            let chunk = STATE.chunks.get(key);
+            
+            if (!chunk) {
+                chunk = createChunk(cx, cz);
+                STATE.chunks.set(key, chunk);
+                scene.add(chunk.mesh);
+            }
+            return chunk;
+        }
+
+        function createChunk(cx, cz) {
+            const size = CONFIG.chunkSize;
+            const geom = new THREE.PlaneGeometry(
+                size * CONFIG.chunkRes, 
+                size * CONFIG.chunkRes, 
+                size, 
+                size
+            );
+            geom.rotateX(-Math.PI / 2);
+            
+            // Offset to world position
+            const worldX = cx * size * CONFIG.chunkRes;
+            const worldZ = cz * size * CONFIG.chunkRes;
+            geom.translate(worldX, 0, worldZ);
+            
+            // Check for existing data or generate
+            const key = getChunkKey(cx, cz);
+            let heights = STATE.heightData.get(key);
+            
+            const posAttr = geom.attributes.position;
+            
+            if (!heights) {
+                heights = new Float32Array(posAttr.count);
+                // Initial Generation
+                for (let i = 0; i < posAttr.count; i++) {
+                    const x = posAttr.getX(i);
+                    const z = posAttr.getZ(i);
+                    heights[i] = getBaseHeight(x, z);
+                }
+                STATE.heightData.set(key, heights);
+            }
+
+            // Apply heights
+            for (let i = 0; i < posAttr.count; i++) {
+                posAttr.setY(i, heights[i]);
+            }
+            
+            geom.computeVertexNormals();
+
+            const mat = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                map: STATE.textures[STATE.currentTexture] || null,
+                roughness: 0.8,
+                metalness: 0.1,
+                side: THREE.DoubleSide
+            });
+
+            const mesh = new THREE.Mesh(geom, mat);
+            mesh.receiveShadow = true;
+            mesh.castShadow = true;
+            // Store metadata
+            mesh.userData = { cx, cz, isTerrain: true };
+
+            return { mesh, geometry: geom, key };
+        }
+
+        function updateChunks() {
+            // Determine visible chunks based on camera
+            // Simple approach: grid around camera
+            const centerX = Math.floor(camera.position.x / (CONFIG.chunkSize * CONFIG.chunkRes));
+            const centerZ = Math.floor(camera.position.z / (CONFIG.chunkSize * CONFIG.chunkRes));
+            const range = CONFIG.renderDistance;
+
+            const neededKeys = new Set();
+
+            for (let x = centerX - range; x <= centerX + range; x++) {
+                for (let z = centerZ - range; z <= centerZ + range; z++) {
+                    getChunk(x, z); // Creates if missing
+                    neededKeys.add(getChunkKey(x, z));
+                }
+            }
+
+            // Clean up distant chunks
+            for (const [key, chunk] of STATE.chunks) {
+                if (!neededKeys.has(key)) {
+                    scene.remove(chunk.mesh);
+                    chunk.geometry.dispose();
+                    chunk.mesh.material.dispose();
+                    STATE.chunks.delete(key);
+                }
+            }
+        }
+
+        function regenerateAllChunks() {
+            // Force redraw of all chunks (e.g. after clear or texture change)
+            for (const [key, chunk] of STATE.chunks) {
+                scene.remove(chunk.mesh);
+                chunk.geometry.dispose();
+            }
+            STATE.chunks.clear();
+            updateChunks();
+        }
+
+        function updateTerrainMaterial() {
+             const tex = STATE.textures[STATE.currentTexture];
+             for (const [key, chunk] of STATE.chunks) {
+                 chunk.mesh.material.map = tex;
+                 chunk.mesh.material.needsUpdate = true;
+             }
+        }
+
+        // --- 6. Interaction / Sculpting ---
+        function setupInteraction() {
+            const container = document.getElementById('canvas-container');
+            
+            let isDragging = false;
+            
+            const onDown = (x, y) => {
+                isDragging = true;
+                controls.enabled = false;
+                sculpt(x, y);
+            };
+
+            const onMove = (x, y) => {
+                if (isDragging) {
+                    sculpt(x, y);
+                }
+            };
+
+            const onUp = () => {
+                isDragging = false;
+                controls.enabled = true;
+            };
+
+            // Mouse
+            container.addEventListener('mousedown', (e) => {
+                if(e.button === 0) onDown(e.clientX, e.clientY);
+            });
+            window.addEventListener('mousemove', (e) => {
+                onMove(e.clientX, e.clientY);
+            });
+            window.addEventListener('mouseup', onUp);
+
+            // Touch
+            container.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    onDown(e.touches[0].clientX, e.touches[0].clientY);
+                } else {
+                    // Multi-touch for orbit
+                    isDragging = false;
+                    controls.enabled = true;
+                }
+            }, { passive: false });
+            
+            container.addEventListener('touchmove', (e) => {
+                if (isDragging && e.touches.length === 1) {
+                    onMove(e.touches[0].clientX, e.touches[0].clientY);
+                }
+            }, { passive: false });
+            
+            container.addEventListener('touchend', onUp);
+        }
+
+        function sculpt(clientX, clientY) {
+            pointer.x = (clientX / window.innerWidth) * 2 - 1;
+            pointer.y = -(clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(pointer, camera);
+            
+            // Get all terrain meshes
+            const terrainMeshes = Array.from(STATE.chunks.values()).map(c => c.mesh);
+            const intersects = raycaster.intersectObjects(terrainMeshes);
+
+            if (intersects.length > 0) {
+                const hit = intersects[0];
+                const point = hit.point;
+                applyBrush(point);
+            }
+        }
+
+        function applyBrush(centerPoint) {
+            const r = STATE.brush.radius;
+            const rSq = r * r;
+            const strength = STATE.brush.strength;
+            const mode = STATE.brush.mode;
+            
+            // Find chunks in range (simple: iterate all active chunks, could be optimized)
+            for (const chunk of STATE.chunks.values()) {
+                const mesh = chunk.mesh;
+                const geom = chunk.geometry;
+                const posAttr = geom.attributes.position;
+                const box = new THREE.Box3().setFromObject(mesh);
+                
+                // Cheap BBox check
+                if (!box.intersectsSphere(new THREE.Sphere(centerPoint, r))) continue;
+
+                const heights = STATE.heightData.get(chunk.key);
+                let modified = false;
+
+                // World to Local conversion not strictly needed if we iterate world positions, 
+                // but we iterate vertices which are local but translated
+                // Actually the geometry is translated in world space in createChunk
+                
+                for (let i = 0; i < posAttr.count; i++) {
+                    const vx = posAttr.getX(i);
+                    const vy = posAttr.getY(i);
+                    const vz = posAttr.getZ(i);
+
+                    const dx = vx - centerPoint.x;
+                    const dz = vz - centerPoint.z;
+                    const distSq = dx*dx + dz*dz;
+
+                    if (distSq < rSq) {
+                        const dist = Math.sqrt(distSq);
+                        const falloff = 0.5 + 0.5 * Math.cos((dist / r) * Math.PI); // Smooth falloff
+                        const factor = strength * falloff;
+
+                        let newH = vy;
+
+                        if (mode === 'raise') {
+                            newH += factor;
+                        } else if (mode === 'lower') {
+                            newH -= factor;
+                        } else if (mode === 'flatten') {
+                            // Move towards center height
+                            newH = THREE.MathUtils.lerp(vy, centerPoint.y, factor * 0.5);
+                        } else if (mode === 'smooth') {
+                            // Simple average with neighbors would be better, but tricky in unstructured iteration
+                            // Just blur towards local average? 
+                            // For now, let's just implement flatten-like behavior for smooth as placeholder or noise reduction
+                            // Better smooth:
+                            newH = THREE.MathUtils.lerp(vy, 0, factor * 0.1); // Erosion-ish
+                        }
+
+                        if (newH !== vy) {
+                            posAttr.setY(i, newH);
+                            heights[i] = newH; // Sync data
+                            modified = true;
+                        }
+                    }
+                }
+
+                if (modified) {
+                    posAttr.needsUpdate = true;
+                    geom.computeVertexNormals();
+                }
+            }
+        }
+
+        // --- 7. Loop ---
+        const clock = new THREE.Clock();
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            
+            // Lazy load chunks on move
+            if (clock.getElapsedTime() % 0.5 < 0.05) { // Check every 0.5s approx
+                 updateChunks();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Boot
+        init();
+
+    </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
