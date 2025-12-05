@@ -26,6 +26,7 @@ async function init() {
 
         // Renderer
         const canvas = document.createElement('canvas');
+        canvas.style.touchAction = 'none';
         document.getElementById('canvas-container').appendChild(canvas);
         
         renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
@@ -55,10 +56,11 @@ async function init() {
         // Mobile Interactions
         controls.enableZoom = true;
         controls.enablePan = true;
-        controls.screenSpacePanning = false; // Pan on XZ plane
-        controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
+        controls.screenSpacePanning = false; // Pan on XZ plane (keeps camera height constant)
+        controls.touches.ONE = THREE.TOUCH.ROTATE; // Default, but disabled by enableRotate = false
+        controls.touches.TWO = THREE.TOUCH.DOLLY_PAN; // Two fingers to zoom/pan
         
-        // Start in Sculpt mode (Rotation disabled for 1-finger)
+        // Start in Sculpt mode (Rotation disabled prevents 1-finger interaction from moving camera)
         controls.enableRotate = false; 
 
         // Tools
@@ -95,7 +97,6 @@ function setupInteraction() {
     
     const onDown = (x, y) => {
         isDragging = true;
-        controls.enabled = false;
         sculpt(x, y);
     };
 
@@ -105,7 +106,6 @@ function setupInteraction() {
 
     const onUp = () => {
         isDragging = false;
-        controls.enabled = true;
     };
 
     // Mouse
@@ -119,11 +119,12 @@ function setupInteraction() {
 
     // Touch
     container.addEventListener('touchstart', (e) => {
+        // Only sculpt with 1 finger. 
+        // If 2 fingers touch, OrbitControls handles it (DOLLY_PAN).
         if (e.touches.length === 1) {
             onDown(e.touches[0].clientX, e.touches[0].clientY);
         } else {
-            isDragging = false;
-            controls.enabled = true;
+            isDragging = false; // Stop sculpting if second finger touches
         }
     }, { passive: false });
     
@@ -133,7 +134,12 @@ function setupInteraction() {
         }
     }, { passive: false });
     
-    container.addEventListener('touchend', onUp);
+    container.addEventListener('touchend', (e) => {
+        // Reset if no fingers left
+        if (e.touches.length === 0) {
+            onUp();
+        }
+    });
 }
 
 function sculpt(clientX, clientY) {
