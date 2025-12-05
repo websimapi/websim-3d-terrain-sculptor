@@ -2,7 +2,7 @@ import { STATE } from './config.js';
 import { textureManifest, updateTerrainMaterial, regenerateAllChunks } from './terrain.js';
 import { saveProject, loadProject } from './io.js';
 
-export function initUI(scene, camera) { // Needs scene/camera for regenerate
+export function initUI(scene, camera, controls) { // Needs scene/camera for regenerate
     // Populate texture palette
     const palette = document.getElementById('texture-palette');
     textureManifest.forEach(t => {
@@ -24,6 +24,10 @@ export function initUI(scene, camera) { // Needs scene/camera for regenerate
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             STATE.brush.mode = btn.dataset.tool;
+            
+            if (controls) {
+                controls.enableRotate = (STATE.brush.mode === 'view');
+            }
         };
     });
 

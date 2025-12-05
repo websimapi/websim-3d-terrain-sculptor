@@ -110,7 +110,7 @@ function setupInteraction() {
 
     // Mouse
     container.addEventListener('mousedown', (e) => {
-        if(e.button === 0) onDown(e.clientX, e.clientY);
+        if(STATE.brush.mode !== 'view' && e.button === 0) onDown(e.clientX, e.clientY);
     });
     window.addEventListener('mousemove', (e) => {
         onMove(e.clientX, e.clientY);
@@ -121,7 +121,7 @@ function setupInteraction() {
     container.addEventListener('touchstart', (e) => {
         // Only sculpt with 1 finger. 
         // If 2 fingers touch, OrbitControls handles it (DOLLY_PAN).
-        if (e.touches.length === 1) {
+        if (e.touches.length === 1 && STATE.brush.mode !== 'view') {
             onDown(e.touches[0].clientX, e.touches[0].clientY);
         } else {
             isDragging = false; // Stop sculpting if second finger touches
